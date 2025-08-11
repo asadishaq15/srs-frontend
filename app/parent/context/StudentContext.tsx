@@ -4,27 +4,29 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 
 export interface Student {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  dob: string;
-  address: string;
-  class: string;
-  section: string;
-  enrollDate: string;
-  expectedGraduation: string;
-  emergencyContact: string;
-  profilePhoto: string;
-  guardian: {
-    guardianName: string;
-    guardianRelation: string;
-    guardianEmail: string;
-    guardianPhone: string;
-    guardianProfession: string;
-  };
-}
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    dob: string;
+    address: string;
+    class: string;
+    section: string;
+    enrollDate: string;
+    expectedGraduation: string;
+    emergencyContact: string;
+    profilePhoto: string;
+    parents: Array<{
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      address: string;
+    }>;
+   
+  }
 
 interface StudentContextType {
   students: Student[];

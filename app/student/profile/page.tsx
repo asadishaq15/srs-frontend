@@ -7,36 +7,49 @@ import {
   Phone,
   MapPin,
   BookOpen,
-  Award,
   Calendar,
   Clock,
   User,
-  Briefcase,
   Heart,
-  Ambulance 
+  Ambulance,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 
+type ParentInfo = {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  address?: string;
+};
+
+function InfoItem({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+  return (
+    <div className="flex items-center text-gray-700 dark:text-gray-300">
+      <Icon className="w-5 h-5 mr-2 text-blue-500 dark:text-blue-400" />
+      <span>{text}</span>
+    </div>
+  );
+}
+
 export default function StudentProfile() {
   const [student, setStudent] = useState<any>(null);
+  const [parents, setParents] = useState<ParentInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [cgpa, setCgpa] = useState(0.0);
- 
+
   useEffect(() => {
     const fetchStudentData = async () => {
       try {
         const idFromStorage = localStorage.getItem("id") ?? "";
-        console.log("idFromStorage:", idFromStorage);
         setIsLoading(true);
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_SRS_SERVER}/student/${idFromStorage}`
         );
-        console.log("response", response);
         setStudent(response.data || null);
       } catch (error) {
         console.error("Error fetching student data:", error);
@@ -44,9 +57,45 @@ export default function StudentProfile() {
         setIsLoading(false);
       }
     };
-
     fetchStudentData();
   }, []);
+
+  // Fetch parent details if not already populated
+  useEffect(() => {
+    async function fetchParents() {
+      if (!student || !student.parents) {
+        setParents([]);
+        return;
+      }
+
+      // If already populated (has firstName), just use them
+      if (
+        Array.isArray(student.parents) &&
+        student.parents.length > 0 &&
+        typeof student.parents[0] === "object" &&
+        "firstName" in student.parents[0]
+      ) {
+        setParents(student.parents as ParentInfo[]);
+        return;
+      }
+
+      // Else, fetch parent(s) by ID from backend
+      if (Array.isArray(student.parents) && student.parents.length > 0) {
+        try {
+          const parentRequests = student.parents.map((parentId: string) =>
+            axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/parent/${parentId}`).then(res => res.data)
+          );
+          const parentDetails = await Promise.all(parentRequests);
+          setParents(parentDetails);
+        } catch (err) {
+          setParents([]);
+        }
+      } else {
+        setParents([]);
+      }
+    }
+    fetchParents();
+  }, [student]);
 
   if (isLoading) {
     return (
@@ -65,26 +114,20 @@ export default function StudentProfile() {
   }
 
   const studentInfo = {
-    name: `${student.firstName} ${student.lastName}`,
-    email: student.email,
-    phone: student.phone,
-    dob: new Date(student.dob).toLocaleDateString(),
-    address: student.address,
-    major: "Computer Science", // Not in API, keeping static
-    year: student.class, 
-    profilePhoto : student.profilePhoto,
-    section: student.section,
-    enrollmentDate: new Date(student.enrollDate).toLocaleDateString(),
-    expectedGraduation: student.expectedGraduation,
-    emergencyConntact: student.emergencyContact,
-  };
-
-  const guardianInfo = {
-    name: student.guardian.guardianName,
-    relation: student.guardian.guardianRelation,
-    email: student.guardian.guardianEmail,
-    phone: student.guardian.guardianPhone,
-    occupation: student.guardian.guardianProfession,
+    name: `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim(),
+    email: student.email ?? "",
+    phone: student.phone ?? "",
+    dob: student.dob ? new Date(student.dob).toLocaleDateString() : "",
+    address: student.address ?? "",
+    major: "N/A",
+    year: student.class ?? "",
+    profilePhoto: student.profilePhoto ?? "",
+    section: student.section ?? "",
+    enrollmentDate: student.enrollDate
+      ? new Date(student.enrollDate).toLocaleDateString()
+      : "",
+    expectedGraduation: student.expectedGraduation ?? "",
+    emergencyContact: student.emergencyContact ?? "",
   };
 
   return (
@@ -125,9 +168,6 @@ export default function StudentProfile() {
                 <h1 className="text-4xl font-bold mb-2 text-gray-800 dark:text-white">
                   {studentInfo.name}
                 </h1>
-                <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
-                  {studentInfo.major}
-                </p>
                 <Badge variant="secondary" className="mb-6">
                   Class {studentInfo.year}-{studentInfo.section}
                 </Badge>
@@ -137,7 +177,6 @@ export default function StudentProfile() {
                     <InfoItem icon={Phone} text={studentInfo.phone} />
                     <InfoItem icon={Calendar} text={studentInfo.dob} />
                     <InfoItem icon={MapPin} text={studentInfo.address} />
-                    
                   </div>
                   <div className="space-y-3">
                     <InfoItem
@@ -152,73 +191,51 @@ export default function StudentProfile() {
                       icon={Clock}
                       text={`Expected Graduation: ${studentInfo.expectedGraduation}`}
                     />
-                    <InfoItem icon={Ambulance} text={`${studentInfo.emergencyConntact || 'N/A'}`} />
-
+                    <InfoItem
+                      icon={Ambulance}
+                      text={`${studentInfo.emergencyContact || "N/A"}`}
+                    />
                   </div>
                 </div>
               </div>
-              <div>
-                {/* <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900 dark:to-indigo-900 shadow-md">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-2xl">
-                      <Award className="mr-2" />
-                      Academic Performance
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-5xl font-bold mb-2 text-blue-600 dark:text-blue-400">
-                      {cgpa.toFixed(2)}
-                    </div>
-                    <Progress value={(cgpa / 4) * 100} className="h-2 mb-4" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Cumulative GPA (out of 4.0)
-                    </p>
-                  </CardContent>
-                </Card> */}
-              </div>
+              <div>{/* Future right side */}</div>
             </div>
-
-            <Tabs defaultValue="guardian" className="mt-12">
+            <Tabs defaultValue="parent" className="mt-12">
               <TabsList className="grid w-full grid-cols-1 mb-8">
-                <TabsTrigger value="guardian">Guardian Information</TabsTrigger>
+                <TabsTrigger value="parent">Parent Information</TabsTrigger>
               </TabsList>
-              <TabsContent value="guardian">
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="text-2xl font-semibold mb-4 flex items-center">
-                      <Heart className="mr-2 text-red-500" />
-                      Guardian Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <InfoItem icon={User} text={guardianInfo.name} />
-                        <InfoItem icon={Heart} text={guardianInfo.relation} />
-                        <InfoItem
-                          icon={Briefcase}
-                          text={guardianInfo.occupation}
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <InfoItem icon={Mail} text={guardianInfo.email} />
-                        <InfoItem icon={Phone} text={guardianInfo.phone} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              <TabsContent value="parent">
+                {parents.length === 0 ? (
+                  <div className="text-muted-foreground">
+                    No parent information found.
+                  </div>
+                ) : (
+                  parents.map((p, idx: number) => (
+                    <Card key={p.email + idx}>
+                      <CardContent className="p-6">
+                        <h3 className="text-2xl font-semibold mb-4 flex items-center">
+                          <Heart className="mr-2 text-red-500" />
+                          {`${p.firstName ?? ""} ${p.lastName ?? ""}`.trim()}
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-3">
+                            <InfoItem icon={User} text={`${p.firstName ?? ""} ${p.lastName ?? ""}`.trim()} />
+                            <InfoItem icon={Mail} text={p.email ?? ""} />
+                          </div>
+                          <div className="space-y-3">
+                            <InfoItem icon={Phone} text={p.phone ?? ""} />
+                            <InfoItem icon={MapPin} text={p.address ?? ""} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       </motion.div>
-    </div>
-  );
-}
-
-function InfoItem({ icon: Icon, text }: { icon: any; text: string }) {
-  return (
-    <div className="flex items-center text-gray-700 dark:text-gray-300">
-      <Icon className="w-5 h-5 mr-2 text-blue-500 dark:text-blue-400" />
-      <span>{text}</span>
     </div>
   );
 }

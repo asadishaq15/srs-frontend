@@ -1,3 +1,4 @@
+// app/parent/behavior/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -19,43 +20,15 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { format, subDays, addDays } from "date-fns"
+import { format } from "date-fns"
 import { useStudent } from "../context/StudentContext"
+import axios from "axios"
 
-// --- Seeded random for per-student consistent variation ---
-function seededRandom(seed: number) {
-  let x = Math.sin(seed++) * 10000
-  return x - Math.floor(x)
-}
-function getSeedForStudent(id: string) {
-  // Simple hash
-  return id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
-}
-
-// --- Types ---
-interface BehaviorIncident {
-  id: string
-  type: "positive" | "negative" | "neutral"
-  title: string
-  description: string
-  date: string
-  teacher: {
-    id: string
-    name: string
-    subject: string
-    image?: string
-  }
-  location: string
-  action?: string
-  status: "resolved" | "pending" | "ongoing"
-}
-
-// --- Main Component ---
 export default function ParentBehavior() {
   const { selectedStudent, isLoading: studentLoading } = useStudent()
   
-  const [incidents, setIncidents] = useState<BehaviorIncident[]>([])
-  const [filteredIncidents, setFilteredIncidents] = useState<BehaviorIncident[]>([])
+  const [incidents, setIncidents] = useState<any[]>([])
+  const [filteredIncidents, setFilteredIncidents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -74,143 +47,20 @@ export default function ParentBehavior() {
   })
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest")
 
-  // --- Fetch & Generate Behavior Data based on selected student ---
+  // Fetch from API
   useEffect(() => {
-    if (selectedStudent) {
-      fetchBehaviorData(selectedStudent)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!selectedStudent) return
+    setLoading(true)
+    setError(null)
+    axios
+      .get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/behavior?studentId=${selectedStudent._id}`)
+      .then(res => setIncidents(res.data || []))
+      .catch(e => setError("Failed to load behavior records"))
+      .finally(() => setLoading(false))
   }, [selectedStudent])
 
-  // --- Filtering, Search, Sorting ---
+  // Filtering, Search, Sorting
   useEffect(() => {
-    applyFilters()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incidents, typeFilters, statusFilters, sortOrder, searchQuery])
-
-  // --- Generate per-student mock data ---
-  const fetchBehaviorData = async (student: { id: string; name: string }) => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 700))
-
-      // --- Mock data template ---
-      const types = ["positive", "negative", "neutral"] as const
-      const statuses = ["resolved", "pending", "ongoing"] as const
-      const locations = [
-        "Math Classroom", "Science Lab", "English Classroom", "History Room",
-        "Library", "Detention Room", "School Hallway", "Playground"
-      ]
-      const teachers = [
-        { id: "t1", name: "Mrs. Jennifer Davis", subject: "Mathematics", image: "/teachers/teacher1.jpg" },
-        { id: "t2", name: "Mr. Robert Wilson", subject: "Science", image: "/teachers/teacher2.jpg" },
-        { id: "t3", name: "Ms. Sarah Johnson", subject: "English Literature", image: "/teachers/teacher3.jpg" },
-        { id: "t4", name: "Mr. David Brown", subject: "History", image: "/teachers/teacher4.jpg" },
-        { id: "t5", name: "Mrs. Lisa Taylor", subject: "School Counselor", image: "/staff/counselor.jpg" },
-        { id: "t6", name: "Coach Maria Lee", subject: "Physical Education", image: "/teachers/teacher5.jpg" }
-      ]
-      const templates = [
-        {
-          type: "positive",
-          title: "Outstanding Classroom Participation",
-          desc: "consistently participates in class discussions and offers thoughtful contributions. Demonstrated exceptional leadership during a group project.",
-          action: undefined,
-        },
-        {
-          type: "negative",
-          title: "Disruptive Behavior",
-          desc: "was talking excessively during the lesson and disrupting other students' ability to focus. Was asked multiple times to lower their voice.",
-          action: "Verbal warning and moved seat",
-        },
-        {
-          type: "neutral",
-          title: "Late Assignment Submission",
-          desc: "submitted an essay two days after the deadline. While the work was of good quality, it's important to adhere to deadlines.",
-          action: undefined,
-        },
-        {
-          type: "positive",
-          title: "Helping a New Student",
-          desc: "went out of their way to help a new student navigate the school and understand class procedures. Kindness and leadership are commendable.",
-          action: undefined,
-        },
-        {
-          type: "negative",
-          title: "Missed Detention",
-          desc: "did not attend their assigned detention session. This is concerning as it was scheduled as a follow-up to previous classroom disruptions.",
-          action: "Rescheduled detention and parent notification",
-        },
-        {
-          type: "neutral",
-          title: "Tardy to Class",
-          desc: "arrived to class after the bell. Student apologized for being late.",
-          action: undefined,
-        },
-        {
-          type: "positive",
-          title: "Excellent Sportsmanship",
-          desc: "showed great teamwork and encouragement towards peers during PE class.",
-          action: undefined,
-        },
-        {
-          type: "negative",
-          title: "Inappropriate Language",
-          desc: "used inappropriate language in the hallway. Apologized after being addressed.",
-          action: "Parent contacted, apology letter assigned",
-        }
-      ] as const
-
-      // --- Generate 5-7 random incidents per student, but always consistent for that student ---
-      const seed = getSeedForStudent(student.id)
-      const count = 5 + Math.floor(seededRandom(seed + 999) * 3) // 5-7 incidents
-
-      // Most recent incident date is today minus random 2-6 days
-      const today = new Date()
-      const startDaysAgo = 2 + Math.floor(seededRandom(seed + 991) * 5)
-
-      const incidentList: BehaviorIncident[] = Array.from({ length: count }).map((_, i) => {
-        // Deterministic index shuffle
-        const tIndex = Math.floor(seededRandom(seed + i * 7) * templates.length)
-        const teacherIndex = Math.floor(seededRandom(seed + i * 13) * teachers.length)
-        const locationIndex = Math.floor(seededRandom(seed + i * 17) * locations.length)
-        const statusIndex = Math.floor(seededRandom(seed + i * 23) * statuses.length)
-
-        // Make some incidents always positive, some always negative, some neutral, but order changes per student
-        const template = templates[tIndex]
-        const teacher = teachers[teacherIndex]
-        const location = locations[locationIndex]
-        const status = statuses[statusIndex]
-
-        // Date: Recent incidents are more likely
-        const daysAgo = startDaysAgo + i * (1 + Math.floor(seededRandom(seed + i * 29) * 3))
-        const date = subDays(today, daysAgo)
-
-        return {
-          id: String(i + 1),
-          type: template.type as "positive" | "negative" | "neutral",
-          title: template.title,
-          description: `${student.name} ${template.desc}`,
-          date: format(date, "yyyy-MM-dd"),
-          teacher,
-          location,
-          action: template.action,
-          status
-        }
-      })
-
-      setIncidents(incidentList)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred while fetching behavior data")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // --- Filtering ---
-  const applyFilters = () => {
     let filtered = [...incidents]
     filtered = filtered.filter(incident => typeFilters[incident.type])
     filtered = filtered.filter(incident => statusFilters[incident.status])
@@ -219,8 +69,11 @@ export default function ParentBehavior() {
       filtered = filtered.filter(incident => 
         incident.title.toLowerCase().includes(query) ||
         incident.description.toLowerCase().includes(query) ||
-        incident.teacher.name.toLowerCase().includes(query) ||
-        incident.location.toLowerCase().includes(query)
+        (incident.teacherId && (
+          `${incident.teacherId.firstName} ${incident.teacherId.lastName}`.toLowerCase().includes(query) ||
+          (incident.teacherId.subject || "").toLowerCase().includes(query)
+        )) ||
+        (incident.location?.toLowerCase().includes(query))
       )
     }
     filtered.sort((a, b) => {
@@ -229,9 +82,9 @@ export default function ParentBehavior() {
       return sortOrder === "newest" ? dateB - dateA : dateA - dateB
     })
     setFilteredIncidents(filtered)
-  }
+  }, [incidents, typeFilters, statusFilters, sortOrder, searchQuery])
 
-  // --- UI helpers ---
+  // UI helpers
   const toggleExpand = (id: string) => setExpandedId(expandedId === id ? null : id)
 
   const getIncidentIcon = (type: string) => {
@@ -251,69 +104,21 @@ export default function ParentBehavior() {
     }
   }
 
-  // --- Loading, Error, No Student UI ---
   if (studentLoading) {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <svg className="animate-spin h-12 w-12 text-indigo-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="text-lg text-gray-600 dark:text-gray-400">Loading student data...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen p-8 flex items-center justify-center"><span>Loading student data...</span></div>
   }
-
   if (!selectedStudent) {
-    return (
-      <div className="min-h-screen  p-8">
-        <div className="max-w-4xl mx-auto">
-          <Alert className="my-8">
-            <AlertDescription>
-              Please select a student to view behavior reports.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen p-8 flex items-center justify-center"><span>Please select a student to view behavior reports.</span></div>
   }
-
   if (loading) {
-    return (
-      <div className="min-h-screen  p-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <svg className="animate-spin h-12 w-12 text-indigo-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p className="text-lg text-gray-600 dark:text-gray-400">Loading behavior records...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen p-8 flex items-center justify-center"><span>Loading behavior records...</span></div>
   }
-
   if (error) {
-    return (
-      <div className="min-h-screen  p-8">
-        <div className="max-w-4xl mx-auto">
-          <Alert className="my-8">
-            <AlertDescription className="text-red-500">
-              {error}
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    )
+    return <div className="min-h-screen p-8 flex items-center justify-center text-red-500"><span>{error}</span></div>
   }
 
   return (
-    <div className="min-h-screen  p-8">
+    <div className="min-h-screen p-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -324,18 +129,18 @@ export default function ParentBehavior() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
-              {selectedStudent.image && 
-                <AvatarImage src={selectedStudent.image} alt={selectedStudent.name} />
+              {selectedStudent.profilePhoto &&
+                <AvatarImage src={selectedStudent.profilePhoto} alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`} />
               }
-              <AvatarFallback>{selectedStudent.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{selectedStudent.firstName?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedStudent.name}</div>
-              <div className="text-xs text-gray-500">{selectedStudent.grade} • {selectedStudent.school}</div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100">{selectedStudent.firstName} {selectedStudent.lastName}</div>
+              <div className="text-xs text-gray-500">Grade {selectedStudent.class} • Section {selectedStudent.section}</div>
             </div>
           </div>
           <p className="text-center text-gray-600 dark:text-gray-400 mt-2">
-            View behavior records and incident reports for <span className="font-medium">{selectedStudent.name}</span>
+            View behavior records and incident reports for <span className="font-medium">{selectedStudent.firstName} {selectedStudent.lastName}</span>
           </p>
         </div>
 
@@ -437,7 +242,7 @@ export default function ParentBehavior() {
           <div className="space-y-4">
             {filteredIncidents.map((incident) => (
               <motion.div
-                key={incident.id}
+                key={incident._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -466,33 +271,38 @@ export default function ParentBehavior() {
                       </div>
                     </div>
                   </CardHeader>
-
                   <CardContent className="pb-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center space-x-4 mb-2 sm:mb-0">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          <span>{incident.teacher.name}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span>{incident.location}</span>
-                        </div>
+                        {incident.teacherId && (
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            <span>
+                              {incident.teacherId.firstName} {incident.teacherId.lastName}
+                              {incident.teacherId.subject ? ` (${incident.teacherId.subject})` : ""}
+                            </span>
+                          </div>
+                        )}
+                        {incident.location && (
+                          <div className="flex items-center">
+                            <MapPin className="h-4 w-4 mr-1" />
+                            <span>{incident.location}</span>
+                          </div>
+                        )}
                       </div>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => toggleExpand(incident.id)}
+                        onClick={() => toggleExpand(incident._id)}
                         className="text-gray-500 self-end sm:self-auto"
                       >
-                        {expandedId === incident.id ? 
+                        {expandedId === incident._id ? 
                           <ChevronUp className="h-5 w-5" /> : 
                           <ChevronDown className="h-5 w-5" />
                         }
                       </Button>
                     </div>
-
-                    {expandedId === incident.id && (
+                    {expandedId === incident._id && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
@@ -500,18 +310,19 @@ export default function ParentBehavior() {
                         transition={{ duration: 0.3 }}
                       >
                         <Separator className="mb-4" />
-                        
                         <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
                           <div className="sm:col-span-1">
-                            <Avatar className="h-16 w-16">
-                              <AvatarImage src={incident.teacher.image} alt={incident.teacher.name} />
-                              <AvatarFallback>{incident.teacher.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            {incident.teacherId && (
+                              <Avatar className="h-16 w-16">
+                                <AvatarFallback>
+                                  {incident.teacherId.firstName?.charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
                           </div>
                           <div className="sm:col-span-4">
                             <h4 className="text-sm font-medium mb-2">Description:</h4>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{incident.description}</p>
-                            
                             {incident.action && (
                               <div>
                                 <h4 className="text-sm font-medium mb-2">Action Taken:</h4>

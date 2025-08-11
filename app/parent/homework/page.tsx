@@ -64,7 +64,7 @@ export default function ParentHomework() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/${studentId}/assignments`);
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/assignment/by-student/${studentId}`);
       setAssignments(response.data || []);
     } catch (err) {
       setError("Error fetching assignments");

@@ -67,10 +67,9 @@ export default function CourseDetail({ params }: { params: { id: string } }) {
     }
 
     // Get full grade details for the selected course
-    axios
-      .get(
-        `${process.env.NEXT_PUBLIC_SRS_SERVER}/grade/student-course?courseId=${params.id}&studentId=${selectedStudent._id}`
-      )
+    axios.get(
+      `/api/grade/student-course?courseId=${params.id}&studentId=${selectedStudent._id}`
+    )
       .then((res) => setCourseData(res.data))
       .catch(() => setCourseData(null))
       .finally(() => setLoading(false));

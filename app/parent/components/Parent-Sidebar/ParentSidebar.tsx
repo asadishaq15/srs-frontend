@@ -50,11 +50,11 @@ const ParentSidebar = ({isSidebarOpen, setIsSidebarOpen}:{isSidebarOpen:boolean,
       href: "/parent/schedule",
       icon: FileText,
     },
-    // {
-    //   name: "Homework & Assignments",
-    //   href: "/parent/homework",
-    //   icon: ClipboardList,
-    // },
+    {
+      name: "Homework & Assignments",
+      href: "/parent/homework",
+      icon: ClipboardList,
+    },
     {
       name: "School Calendar",
       href: "/parent/calendar",
@@ -70,11 +70,11 @@ const ParentSidebar = ({isSidebarOpen, setIsSidebarOpen}:{isSidebarOpen:boolean,
     //   href: "/parent/communication",
     //   icon: MessageSquare,
     // },
-    // {
-    //   name: "Behavior Log",
-    //   href: "/parent/behavior",
-    //   icon: AlertTriangle,
-    // },
+    {
+      name: "Behavior Log",
+      href: "/parent/behavior",
+      icon: AlertTriangle,
+    },
     {
       name: "Submit Absence",
       href: "/parent/absence",

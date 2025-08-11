@@ -56,11 +56,10 @@ export default function GradesPage() {
 
     setLoading(true);
     setError(null);
-
     Promise.all([
-      axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/grade/by-student/${selectedStudent._id}`),
-      axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/${selectedStudent._id}/report-cards`),
-      axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/grade/gpa/${selectedStudent._id}`)
+      axios.get(`/api/grade/by-student/${selectedStudent._id}`),
+      axios.get(`/api/student/${selectedStudent._id}/report-cards`),
+      axios.get(`/api/grade/gpa/${selectedStudent._id}`)
     ])
       .then(([gradesRes, reportsRes, gpaRes]) => {
         setSubjects(gradesRes.data || []);
