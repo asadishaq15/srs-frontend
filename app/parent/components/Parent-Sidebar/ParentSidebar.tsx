@@ -31,7 +31,7 @@ const ParentSidebar = ({isSidebarOpen, setIsSidebarOpen}:{isSidebarOpen:boolean,
 
   const navigation = [
     {
-      name: "Student Profile",
+      name: "My Profile",
       href: "/parent/profile",
       icon: User,
     },
@@ -80,11 +80,11 @@ const ParentSidebar = ({isSidebarOpen, setIsSidebarOpen}:{isSidebarOpen:boolean,
       href: "/parent/absence",
       icon: FileCheck,
     },
-    // {
-    //   name: "Documents & Forms",
-    //   href: "/parent/documents",
-    //   icon: FileCheck,
-    // },
+    {
+      name: "Documents & Forms",
+      href: "/parent/documents",
+      icon: FileCheck,
+    },
   ]
 
   if (!isMounted) {

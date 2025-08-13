@@ -65,19 +65,12 @@ export default function ParentDocuments() {
 
   // Filter states
   const [typeFilters, setTypeFilters] = useState<Record<string, boolean>>({
-    form: true,
-    permission: true,
-    report: true,
-    letter: true
+    form: true, permission: true, report: true, letter: true
   });
   const [categoryFilters, setCategoryFilters] = useState<Record<string, boolean>>({
-    academic: true,
-    administrative: true,
-    extracurricular: true,
-    health: true
+    academic: true, administrative: true, extracurricular: true, health: true
   });
 
-  // Fetch backend data
   useEffect(() => {
     if (selectedStudent && selectedStudent._id) {
       fetchDocuments(selectedStudent._id)
@@ -86,13 +79,9 @@ export default function ParentDocuments() {
       setFilteredDocuments([])
       setLoading(false)
     }
-    // eslint-disable-next-line
   }, [selectedStudent])
 
-  useEffect(() => {
-    applyFilters()
-    // eslint-disable-next-line
-  }, [documents, activeTab, typeFilters, categoryFilters, searchQuery])
+  useEffect(() => { applyFilters() }, [documents, activeTab, typeFilters, categoryFilters, searchQuery])
 
   const fetchDocuments = async (studentId: string) => {
     try {
@@ -119,7 +108,7 @@ export default function ParentDocuments() {
     filtered = filtered.filter(doc => categoryFilters[doc.category])
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(doc => 
+      filtered = filtered.filter(doc =>
         doc.title.toLowerCase().includes(query) ||
         doc.description.toLowerCase().includes(query)
       )
@@ -130,16 +119,11 @@ export default function ParentDocuments() {
 
   const getDocumentIcon = (type: string) => {
     switch (type) {
-      case "form":
-        return <FileText className="h-6 w-6 text-blue-500" />
-      case "permission":
-        return <FileText className="h-6 w-6 text-green-500" />
-      case "report":
-        return <FileText className="h-6 w-6 text-purple-500" />
-      case "letter":
-        return <FileText className="h-6 w-6 text-amber-500" />
-      default:
-        return <FileText className="h-6 w-6 text-gray-500" />
+      case "form": return <FileText className="h-6 w-6 text-blue-500" />
+      case "permission": return <FileText className="h-6 w-6 text-green-500" />
+      case "report": return <FileText className="h-6 w-6 text-purple-500" />
+      case "letter": return <FileText className="h-6 w-6 text-amber-500" />
+      default: return <FileText className="h-6 w-6 text-gray-500" />
     }
   }
 
@@ -193,9 +177,7 @@ export default function ParentDocuments() {
         {
           headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (e) => {
-            if (e.total) {
-              setUploadProgress(Math.round((e.loaded * 100) / e.total));
-            }
+            if (e.total) setUploadProgress(Math.round((e.loaded * 100) / e.total));
           },
         }
       );
@@ -216,31 +198,21 @@ export default function ParentDocuments() {
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case "academic":
-        return "Academic"
-      case "administrative":
-        return "Administrative"
-      case "extracurricular":
-        return "Extracurricular"
-      case "health":
-        return "Health & Medical"
-      default:
-        return category
+      case "academic": return "Academic"
+      case "administrative": return "Administrative"
+      case "extracurricular": return "Extracurricular"
+      case "health": return "Health & Medical"
+      default: return category
     }
   }
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case "form":
-        return "Form"
-      case "permission":
-        return "Permission Slip"
-      case "report":
-        return "Report"
-      case "letter":
-        return "Letter"
-      default:
-        return type
+      case "form": return "Form"
+      case "permission": return "Permission Slip"
+      case "report": return "Report"
+      case "letter": return "Letter"
+      default: return type
     }
   }
 
@@ -321,7 +293,7 @@ export default function ParentDocuments() {
             {selectedStudent.profilePhoto && (
               <img
                 src={selectedStudent.profilePhoto}
-                alt={selectedStudent.name}
+                alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
                 className="w-8 h-8 rounded-full object-cover"
               />
             )}

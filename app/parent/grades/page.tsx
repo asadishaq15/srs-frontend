@@ -139,15 +139,22 @@ export default function GradesPage() {
               <div className="text-center p-6 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current GPA</p>
                 <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                  {gpaData ? gpaData.current.toFixed(2) : "--"}
-                </p>
+  {gpaData && typeof gpaData.current === "number" ? gpaData.current.toFixed(2) : "--"}
+</p>
                 <div className="mt-2 flex justify-center">
                   {gpaData && (
-                    <Badge className={gpaData.trend === 'up'
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'}>
-                      {gpaData.trend === 'up' ? '↑' : '↓'} From {gpaData.previous.toFixed(2)}
-                    </Badge>
+                <Badge
+                className={
+                  gpaData && gpaData.trend === 'up'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                }
+              >
+                {gpaData && gpaData.trend === 'up' ? '↑' : '↓'} From{' '}
+                {gpaData && typeof gpaData.previous === "number"
+                  ? gpaData.previous.toFixed(2)
+                  : "--"}
+              </Badge>
                   )}
                 </div>
               </div>

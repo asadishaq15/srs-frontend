@@ -1,8 +1,0 @@
-import { NextRequest, NextResponse } from "next/server";
-
-export async function GET(req: NextRequest, { params }: { params: { studentId: string } }) {
-  const backendUrl = `${process.env.SRS_SERVER}/grade/gpa/${params.studentId}`;
-  const res = await fetch(backendUrl, { method: "GET" });
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
-}
