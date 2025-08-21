@@ -6,10 +6,13 @@ import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { StudentForm } from "./student-form"
-import { GuardianForm } from "./guardian-form"   
 import { uploadImageToAWS } from "@/lib/awsUpload"
 import { addActivity } from "@/lib/actitivityFunctions"
 import { activities } from "@/lib/activities"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface StudentGuardianModalProps {
   isOpen: boolean
@@ -18,63 +21,21 @@ interface StudentGuardianModalProps {
   handleDone?: any
 }
 
-interface StudentData {
-  studentId: string
+// Parent info
+interface ParentData {
+  _id?: string
   firstName: string
   lastName: string
-  class: string
-  section: string
-  gender: string
-  dob: string
   email: string
   phone: string
   address: string
-  enrollDate: string
-  expectedGraduation: string
-  profilePhoto: any
-  guardianName: string
-  guardianEmail: string
-  guardianPhone: string
-  guardianPhoto: any
-  guardianRelation: string
-  guardianProfession: string
-  transcripts: File[] // Add this line
-  iipFlag: boolean // Add this line
-  honorRolls: boolean // Add this line
-  athletics: boolean // Add this line
-  clubs: string // Add this line
-  lunch: string // Add this line
-  nationality: string // Add this line
-  emergencyContact: string 
-}
-
-interface FormErrors {
-  studentId: string
-  firstName: string
-  lastName: string
-  class: string
-  section: string
-  dob: string
-  email: string
-  phone: string
-  address: string
-  expectedGraduation: string
-  guardianName: string
-  guardianEmail: string
-  guardianPhone: string
-  guardianRelation: string
-  guardianProfession: string
-  iipFlag: boolean // Add this line
-  clubs: string // Add this line
-  lunch: string // Add this line
-  nationality: string // Add this line
-  emergencyContact: string
+  password?: string
 }
 
 export default function StudentGuardianModal({ isOpen, onClose, studentData, handleDone }: StudentGuardianModalProps) {
-  const [currentStep, setCurrentStep] = useState<"student" | "guardian">("student")
+  const [currentStep, setCurrentStep] = useState<"student" | "parent">("student")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState<StudentData>({
+  const [formData, setFormData] = useState<any>({
     studentId: "",
     firstName: "",
     lastName: "",
@@ -84,78 +45,67 @@ export default function StudentGuardianModal({ isOpen, onClose, studentData, han
     dob: "",
     email: "",
     phone: "",
+    password: "",
     address: "",
     enrollDate: new Date().toISOString().split("T")[0],
     expectedGraduation: new Date().getFullYear().toString(),
     profilePhoto: null,
-    guardianName: "",
-    guardianEmail: "",
-    guardianPhone: "",
-    guardianPhoto: null,
-    guardianRelation: "",
-    guardianProfession: "",
-    transcripts: [], // Add this line
-    iipFlag: false, // Add this line
-    honorRolls: false, // Add this line
-    athletics: false, // Add this line
-    clubs: "", // Add this line
-    lunch: "", // Add this line
-    nationality: "", // Add this line
-    emergencyContact: ""
+    parents: [], // array of parent IDs
+    emergencyContact: "",
+    transcripts: [],
+    iipFlag: false,
+    honorRolls: false,
+    athletics: false,
+    clubs: "",
+    lunch: "",
+    nationality: "",
   })
 
-  const [errors, setErrors] = useState<FormErrors>({
-    studentId: "",
+  // For "parent step"
+  const [parentList, setParentList] = useState<ParentData[]>([])
+  const [parentSearch, setParentSearch] = useState("")
+  const [selectedParent, setSelectedParent] = useState<ParentData | null>(null)
+  const [parentForm, setParentForm] = useState<ParentData>({
     firstName: "",
     lastName: "",
-    class: "",
-    section: "",
-    dob: "",
     email: "",
     phone: "",
     address: "",
-    expectedGraduation: "",
-    guardianName: "",
-    guardianEmail: "",
-    guardianPhone: "",
-    guardianRelation: "",
-    guardianProfession: "",
-    iipFlag: false, // Add this line
-    clubs: "", // Add this line
-    lunch: "", // Add this line
-    nationality: "", // Add this line
-    emergencyContact: ""
+    password: "",
   })
+  const [parentIsNew, setParentIsNew] = useState(true)
+  const [parentFormErrors, setParentFormErrors] = useState<any>({})
 
+  const [errors, setErrors] = useState<any>({})
+
+  // For file uploads
   const [studentPhotoPreview, setStudentPhotoPreview] = useState<string | null>(null)
-  const [guardianPhotoPreview, setGuardianPhotoPreview] = useState<string | null>(null)
-  const [transcriptPreviews, setTranscriptPreviews] = useState<{ name: string; size: number }[]>([]) // Add this line
+  const [transcriptPreviews, setTranscriptPreviews] = useState<{ name: string; size: number }[]>([])
 
+  // Fetch parents for search/autocomplete
   useEffect(() => {
-    if (currentStep === "student") {
-      setErrors((prev) => ({
-        ...prev,
-        guardianName: "",
-        guardianEmail: "",
-        guardianPhone: "",
-      }))
-    } else {
-      setErrors((prev) => ({
-        ...prev,
-        studentId: "",
-        firstName: "",
-        lastName: "",
-        class: "",
-        section: "",
-        dob: "",
-        email: "",
-        phone: "",
-        address: "",
-        expectedGraduation: "",
-        emergencyContact:""
-      }))
+    if (parentSearch.length < 2) {
+      setParentList([])
+      return
     }
-  }, [currentStep])
+    const fetchParents = async () => {
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/parent`)
+        // Filter by name/email in frontend
+        setParentList(
+          res.data.filter(
+            (p: ParentData) =>
+              p.firstName.toLowerCase().includes(parentSearch.toLowerCase()) ||
+              p.lastName.toLowerCase().includes(parentSearch.toLowerCase()) ||
+              p.email.toLowerCase().includes(parentSearch.toLowerCase())
+          )
+        )
+      } catch (e) {
+        setParentList([])
+      }
+    }
+    fetchParents()
+  }, [parentSearch])
 
   useEffect(() => {
     if (studentData) {
@@ -175,431 +125,234 @@ export default function StudentGuardianModal({ isOpen, onClose, studentData, han
           : new Date().toISOString().split("T")[0],
         expectedGraduation: studentData.expectedGraduation || new Date().getFullYear().toString(),
         profilePhoto: null,
-        guardianName: studentData.guardian.guardianName || "",
-        guardianEmail: studentData.guardian.guardianEmail || "",
-        guardianPhone: studentData.guardian.guardianPhone || "",
-        guardianPhoto: "no",
-        guardianRelation: studentData.guardian.guardianRelation,
-        guardianProfession: studentData.guardian.guardianProfession,
-        transcripts: [], // Add this line
-        iipFlag: studentData.iipFlag || false, // Add this line
-        honorRolls: studentData.honorRolls || false, // Add this line
-        athletics: studentData.athletics || false, // Add this line
-        clubs: studentData.clubs || "", // Add this line
-        lunch: studentData.lunch || "", // Add this line
-        nationality: studentData.nationality || "", // Add this line
-        emergencyContact: studentData.emergencyContact || "N/A"
+        parents: studentData.parents ? studentData.parents.map((p: any) => p._id) : [],
+        emergencyContact: studentData.emergencyContact || "",
+        transcripts: [],
+        iipFlag: studentData.iipFlag || false,
+        honorRolls: studentData.honorRolls || false,
+        athletics: studentData.athletics || false,
+        clubs: studentData.clubs || "",
+        lunch: studentData.lunch || "",
+        nationality: studentData.nationality || "",
       })
+      setSelectedParent(studentData.parents && studentData.parents.length > 0 ? {
+        _id: studentData.parents[0]._id,
+        firstName: studentData.parents[0].firstName,
+        lastName: studentData.parents[0].lastName,
+        email: studentData.parents[0].email,
+        phone: studentData.parents[0].phone,
+        address: studentData.parents[0].address,
+      } : null)
     }
   }, [studentData])
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData({ ...formData, [name]: value })
-
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }))
-    }
+    if (errors[name]) setErrors((prev: any) => ({ ...prev, [name]: "" }))
   }
 
   const handleSelectChange = (name: string, value: string | boolean) => {
     setFormData({ ...formData, [name]: value })
-
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }))
-    }
+    if (errors[name]) setErrors((prev: any) => ({ ...prev, [name]: "" }))
   }
-  useEffect(() => {
-    console.log("student", studentData)
-  }, [studentData])
 
   const handleStudentPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
       setFormData({ ...formData, profilePhoto: file })
-
       const reader = new FileReader()
-      reader.onload = (event) => {
-        setStudentPhotoPreview(event.target?.result as string)
-      }
+      reader.onload = (event) => setStudentPhotoPreview(event.target?.result as string)
       reader.readAsDataURL(file)
     }
   }
 
-  const handleGuardianPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setFormData({ ...formData, guardianPhoto: file })
-
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setGuardianPhotoPreview(event.target?.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
+  // Transcripts
   const handleTranscriptChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files)
-      setFormData((prev) => ({
+      setFormData((prev: any) => ({
         ...prev,
         transcripts: [...prev.transcripts, ...newFiles],
       }))
-
-      // Update previews
-      const newPreviews = newFiles.map((file) => ({
-        name: file.name,
-        size: file.size,
-      }))
-
+      const newPreviews = newFiles.map((file) => ({ name: file.name, size: file.size }))
       setTranscriptPreviews((prev) => [...prev, ...newPreviews])
     }
   }
-
   const removeTranscript = (index: number) => {
-    setFormData((prev) => {
-      const updatedTranscripts = [...prev.transcripts]
-      updatedTranscripts.splice(index, 1)
-      return {
-        ...prev,
-        transcripts: updatedTranscripts,
-      }
+    setFormData((prev: any) => {
+      const updated = [...prev.transcripts]
+      updated.splice(index, 1)
+      return { ...prev, transcripts: updated }
     })
-
     setTranscriptPreviews((prev) => {
-      const updatedPreviews = [...prev]
-      updatedPreviews.splice(index, 1)
-      return updatedPreviews
+      const updated = [...prev]
+      updated.splice(index, 1)
+      return updated
     })
+  }
+
+  // ==========================
+  // Parent step logic
+  // ==========================
+
+  const handleParentSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setParentSearch(e.target.value)
+    setParentIsNew(true)
+    setSelectedParent(null)
+  }
+
+  const selectExistingParent = (parent: ParentData) => {
+    setSelectedParent(parent)
+    setParentIsNew(false)
+    setParentForm({
+      ...parent,
+      password: "",
+    })
+    setParentFormErrors({})
+  }
+
+  const handleParentFormChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setParentForm((prev) => ({ ...prev, [name]: value }))
+    setParentFormErrors((prev: any) => ({ ...prev, [name]: "" }))
   }
 
   const validateStudentForm = () => {
-    const newErrors = { ...errors }
-    let isValid = true
-
-    // if (!formData.studentId) {
-    //   newErrors.studentId = "Roll number is required"
-    //   isValid = false
-    // }
-
-    if (!formData.firstName) {
-      newErrors.firstName = "First name is required"
-      isValid = false
-    }
-
-    if (!formData.lastName) {
-      newErrors.lastName = "Last name is required"
-      isValid = false
-    }
-
-    if (!formData.class) {
-      newErrors.class = "Class is required"
-      isValid = false
-    }
-
-    if (!formData.section) {
-      newErrors.section = "Section is required"
-      isValid = false
-    }
-
-    if (!formData.dob) {
-      newErrors.dob = "Date of birth is required"
-      isValid = false
-    }
-
-    if (!formData.email) {
-      newErrors.email = "Email is required"
-      isValid = false
-    }
-    if (!formData.emergencyContact) {
-      newErrors.emergencyContact = "Emergency Contact is required"
-      isValid = false
-    }
-   
-    if(!formData.phone){
-      formData.phone = "N/A"
-    }
-
-    
-
-    if (!formData.address) {
-      newErrors.address = "Address is required"
-      isValid = false
-    }
-
-    if (!formData.expectedGraduation) {
-      newErrors.expectedGraduation = "Expected graduation year is required"
-      isValid = false
-    }
-
+    const newErrors: any = {}
+    if (!formData.firstName) newErrors.firstName = "First name required"
+    if (!formData.lastName) newErrors.lastName = "Last name required"
+    if (!formData.class) newErrors.class = "Class required"
+    if (!formData.section) newErrors.section = "Section required"
+    if (!formData.dob) newErrors.dob = "DOB required"
+    if (!formData.email) newErrors.email = "Email required"
+    if (!formData.address) newErrors.address = "Address required"
+    if (!formData.enrollDate) newErrors.enrollDate = "Enrollment date required"
+    if (!formData.expectedGraduation) newErrors.expectedGraduation = "Expected graduation required"
+    if (!formData.emergencyContact) newErrors.emergencyContact = "Emergency contact required"
+     if (!formData.password || formData.password.length < 6) newErrors.password = "Password (min 6 chars) required"
     setErrors(newErrors)
-
-    if (!isValid) {
-      toast.error("Please fill all required fields correctly", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill all student fields")
+      return false
     }
-
-    return isValid
+    return true
   }
 
-  const validateGuardianForm = () => {
-    const newErrors = { ...errors }
-    let isValid = true
-
-    if (!formData.guardianName) {
-      newErrors.guardianName = "Guardian name is required"
-      isValid = false
+  const validateParentForm = () => {
+    const newErrors: any = {}
+    if (parentIsNew) {
+      if (!parentForm.firstName) newErrors.firstName = "First name required"
+      if (!parentForm.lastName) newErrors.lastName = "Last name required"
+      if (!parentForm.email) newErrors.email = "Email required"
+      if (!parentForm.password || parentForm.password.length < 6) newErrors.password = "Password (min 6 chars) required"
     }
-
-    if(!formData.emergencyContact){
-      newErrors.emergencyContact = "Emergency Contact required"
-      isValid = false
+    setParentFormErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill all parent fields")
+      return false
     }
-
-    if (!formData.guardianEmail) {
-      newErrors.guardianEmail = "Guardian email is required"
-      isValid = false
-    } else if (!/^\S+@\S+\.\S+$/.test(formData.guardianEmail)) {
-      newErrors.guardianEmail = "Invalid email format"
-      isValid = false
-    }
-
-    if (!formData.guardianPhone) {
-      formData.guardianPhone = "N/A"
-      // newErrors.guardianPhone = "Guardian phone number is required"
-      // isValid = false
-    } 
-
-    setErrors(newErrors)
-
-    if (!isValid) {
-      toast.error("Please fill all required guardian fields correctly", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
-    }
-
-    return isValid
+    return true
   }
-  function generateCode(): string {
-    let length = 10
-  const timestamp = Date.now().toString(); // e.g., '1718542400000'
-  const random = Math.floor(Math.random() * 1000000).toString(); // 6-digit random number
 
-  // Combine timestamp and random, then trim or pad to the desired length
-  const combined = timestamp + random;
+  // ==========================
+  // Continue / Submit
+  // ==========================
 
-  // Ensure fixed length by slicing from the end (more randomness)
-  return combined.slice(-length);
-}
-
-
-  const handleContinueToGuardian = () => {
+  const handleContinueToParent = () => {
     if (validateStudentForm()) {
-      setCurrentStep("guardian")
+      setCurrentStep("parent")
     }
   }
 
-  const handleBackToStudent = () => {
-    setCurrentStep("student")
-  }
+  const handleBackToStudent = () => setCurrentStep("student")
 
   const handleSubmit = async () => {
-  if (!validateGuardianForm()) {
-    return
-  }
+    if (!validateParentForm()) return
+    setIsSubmitting(true)
+    try {
+      let parentId: string
 
-  setIsSubmitting(true)
+      // 1. Create new parent if needed
+      if (parentIsNew) {
+        // Check if a parent with this email already exists
+        let parentRes;
+        try {
+          parentRes = await axios.get(`${process.env.NEXT_PUBLIC_SRS_SERVER}/parent/by-email/${encodeURIComponent(parentForm.email)}`);
+        } catch (e) {
+          parentRes = null;
+        }
+        let parentObj = null;
+        if (parentRes && parentRes.data && parentRes.data._id) {
+          parentObj = parentRes.data;
+        } else if (parentRes && Array.isArray(parentRes.data) && parentRes.data.length > 0) {
+          // Some APIs return an array
+          parentObj = parentRes.data[0];
+        }
+      
+        if (parentObj) {
+          // Parent already exists, use this
+          parentId = parentObj._id;
+          toast.info("Parent already exists. Selected existing parent.");
+        } else {
+          // Parent does not exist, create new
+          const res = await axios.post(`${process.env.NEXT_PUBLIC_SRS_SERVER}/parent`, parentForm)
+          parentId = res.data._id
+        }
+      } else if (selectedParent && selectedParent._id) {
+        parentId = selectedParent._id
+      } else {
+        throw new Error("Parent selection error")
+      }
 
-  try {
-    let apiData
-    let profilePhotoUrl = null
-    let guardianPhotoUrl = null
-    let transcriptsUrls = []
-
-    // Upload profile photo if exists
-    if (formData.profilePhoto instanceof File) {
-      const uploadResponse = await uploadImageToAWS(formData.profilePhoto, (progress) => {
-        console.log(`Uploading profile photo: ${progress}%`)
-      })
-      profilePhotoUrl = uploadResponse.awsUrl
-    }
-
-    // Upload guardian photo if exists
-    if (formData.guardianPhoto instanceof File) {
-      const uploadResponse = await uploadImageToAWS(formData.guardianPhoto, (progress) => {
-        console.log(`Uploading guardian photo: ${progress}%`)
-      })
-      guardianPhotoUrl = uploadResponse.awsUrl
-    }
-
-    // Upload transcripts if they exist
-    if (formData.transcripts.length > 0) {
+      // 2. Upload images/files
+      let profilePhotoUrl = null
+      let transcriptsUrls: string[] = []
+      if (formData.profilePhoto instanceof File) {
+        const uploadResponse = await uploadImageToAWS(formData.profilePhoto, () => {})
+        profilePhotoUrl = uploadResponse.awsUrl
+      }
       for (const transcript of formData.transcripts) {
-        const uploadResponse = await uploadImageToAWS(transcript, (progress) => {
-          console.log(`Uploading transcript ${transcript.name}: ${progress}%`)
-        })
+        const uploadResponse = await uploadImageToAWS(transcript, () => {})
         transcriptsUrls.push(uploadResponse.awsUrl)
       }
-    }
 
-    if (studentData) {
-    
-      apiData = {
-        studentId: formData.studentId,
-        firstName: formData.firstName || "",
-        lastName: formData.lastName || "",
-        class: formData.class || "",
-        section: formData.section || "",
-        gender: formData.gender || "",
-        dob: formData.dob || "",
-        email: formData.email || "",
-        phone: formData.phone || "",
-        address: formData.address || "",
-        enrollDate: formData.enrollDate || "",
-        expectedGraduation: formData.expectedGraduation || "",
-        profilePhoto: profilePhotoUrl || studentData.profilePhoto || "no",
-        guardianName: formData.guardianName || "",
-        guardianEmail: formData.guardianEmail || "",
-        guardianPhone: formData.guardianPhone || "",
-        guardianPhoto: guardianPhotoUrl || studentData.guardian?.guardianPhoto || "no",
-        guardianRelation: formData.guardianRelation || "",
-        guardianProfession: formData.guardianProfession || "",
-        iipFlag: formData.iipFlag || false,
-        honorRolls: Boolean(formData.honorRolls),
-        athletics: Boolean(formData.athletics),
-        clubs: formData.clubs || "",
-        lunch: formData.lunch || "",
-        nationality: formData.nationality || "",
-        transcripts: transcriptsUrls.length > 0 ? transcriptsUrls.join(',') : studentData.transcripts || "no",
-        emergencyContact: formData.emergencyContact || "N/A",
+      // 3. Prepare student data
+      const apiData = {
+        ...formData,
+        profilePhoto: profilePhotoUrl || "N/A",
+        transcripts: transcriptsUrls,
+        parents: [parentId],
+        password: formData.password,
       }
 
-      console.log("api data", apiData)
-      const response = await axios.put(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/${studentData._id}`, apiData)
-      if (response.data.status == 409) {
-        toast.error(response.data.msg)
+      // 4. Add/Edit student
+      if (studentData) {
+        await axios.put(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/${studentData._id}`, apiData)
+        toast.success("Student updated successfully!")
       } else {
-        toast.success("Student updated successfully", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        })
-        await handleDone()   
-        const message = activities.admin.updateStudent.description.replace('{studentName}', apiData.firstName);
-        
-        const activity = { 
-          title: activities.admin.updateStudent.action, 
-          subtitle: message, 
-          performBy: "Admin"
-        }; 
-        const act = await addActivity(activity);  
-        console.log('activity', act);
-         
-        resetForm()
-        onClose()
-      }
-    } else {
-      apiData = {
-        studentId: generateCode(),
-        firstName: formData.firstName || "",
-        lastName: formData.lastName || "",
-        class: formData.class || "",
-        section: formData.section || "",
-        gender: formData.gender || "",
-        dob: formData.dob || "",
-        email: formData.email || "",
-        phone: formData.phone || "",
-        address: formData.address || "",
-        enrollDate: formData.enrollDate || "",
-        expectedGraduation: formData.expectedGraduation || "",
-        profilePhoto: profilePhotoUrl || "no",
-        guardianName: formData.guardianName || "",
-        guardianEmail: formData.guardianEmail || "",
-        guardianPhone: formData.guardianPhone || "",
-        guardianPhoto: guardianPhotoUrl || "no",
-        guardianRelation: formData.guardianRelation || "",
-        guardianProfession: formData.guardianProfession || "",
-        iipFlag: formData.iipFlag || false,
-        honorRolls: Boolean(formData.honorRolls),
-        athletics: Boolean(formData.athletics),
-        clubs: formData.clubs || "",
-        lunch: formData.lunch || "",
-        nationality: formData.nationality || "",
-        transcripts: transcriptsUrls.length > 0 ? transcriptsUrls.join(',') : "no",
-        emergencyContact: formData.emergencyContact || "N/A",
+        await axios.post(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/add`, apiData)
+        toast.success("Student added successfully!")
       }
 
-      console.log("AddingData", apiData)
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_SRS_SERVER}/student/add`, apiData)
-      console.log("response", response)
-      if (response.data.status == 409) {
-        toast.error(response.data.msg)
+      await handleDone?.()
+      setCurrentStep("student")
+      resetForm()
+      onClose()
+    } catch (error: any) {
+      if (error.response?.status === 409) {
+        toast.error(error.response.data.msg)
+      } else if (error.response?.data?.msg) {
+        toast.error(error.response.data.msg)
       } else {
-        toast.success("Student added successfully", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        })
-        await handleDone()   
-        const message = activities.admin.updateStudent.description.replace('{studentName}', apiData.firstName);
-        const activity = { 
-          title: activities.admin.addStudent.action, 
-          subtitle: message, 
-          performBy: "Admin"
-        }; 
-        const act = await addActivity(activity);  
-        console.log('activity', act);
-         
-        resetForm()
-        onClose()
+        toast.error("Error saving student/parent")
       }
+    } finally {
+      setIsSubmitting(false)
     }
-  } catch (error) {
-    console.error("Error in form submission:", error)
-    if (error.response && error.response.status === 409) {
-      toast.error("This Email is Already Registered", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
-    } else {
-      toast.error("An error occurred while submitting the form", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
-    }
-  } finally {
-    setIsSubmitting(false)
   }
-}
 
   const resetForm = () => {
-    setCurrentStep("student")
     setFormData({
       studentId: "",
       firstName: "",
@@ -614,128 +367,205 @@ export default function StudentGuardianModal({ isOpen, onClose, studentData, han
       enrollDate: new Date().toISOString().split("T")[0],
       expectedGraduation: new Date().getFullYear().toString(),
       profilePhoto: null,
-      guardianName: "",
-      guardianEmail: "",
-      guardianPhone: "",
-      guardianPhoto: null,
-      guardianRelation: "",
-      guardianProfession: "",
-      transcripts: [], // Add this line
-      iipFlag: false, // Add this line
-      honorRolls: false, // Add this line
-      athletics: false, // Add this line
-      clubs: "", // Add this line
-      lunch: "", // Add this line
-      nationality: "", // Add this line
-      emergencyContact: ""
+      parents: [],
+      emergencyContact: "",
+      transcripts: [],
+      iipFlag: false,
+      honorRolls: false,
+      athletics: false,
+      clubs: "",
+      lunch: "",
+      nationality: "",
     })
-    setStudentPhotoPreview(null)
-    setGuardianPhotoPreview(null)
-    setTranscriptPreviews([]) // Add this line
-    setErrors({
-      studentId: "",
+    setSelectedParent(null)
+    setParentForm({
       firstName: "",
       lastName: "",
-      class: "",
-      section: "",
-      dob: "",
       email: "",
       phone: "",
       address: "",
-      expectedGraduation: "",
-      guardianName: "",
-      guardianEmail: "",
-      guardianPhone: "",
-      guardianRelation: "",
-      guardianProfession: "",
-      iipFlag: false, // Add this line
-      clubs: "", // Add this line
-      lunch: "", // Add this line
-      nationality: "", // Add this line
-      emergencyContact: ""
+      password: "",
     })
+    setParentSearch("")
+    setParentIsNew(true)
+    setParentFormErrors({})
+    setStudentPhotoPreview(null)
+    setTranscriptPreviews([])
+    setErrors({})
   }
 
   const handleCloseRequest = (open: boolean) => {
     if (!isSubmitting && !open) {
       onClose()
+      resetForm()
     }
   }
 
-  return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleCloseRequest}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-5xl p-0">
-          <div className="custom-scrollbar max-h-[80vh] overflow-y-auto">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle>
-                {studentData ? "Edit " : "Add "}
-                {currentStep === "student" ? "Student Information" : "Guardian Information"}
-              </DialogTitle>
-            </DialogHeader>
+  // ==========================
+  // Render
+  // ==========================
 
-            <div className="relative overflow-hidden">
-              <div
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{
-                  transform: currentStep === "student" ? "translateX(0%)" : "translateX(-50%)",
-                  width: "200%",
-                }}
-              >
-                <div className="w-1/2 flex-shrink-0">
-                  <StudentForm
-                    formData={formData}
-                    errors={errors}
-                    photoPreview={studentPhotoPreview}
-                    onInputChange={handleInputChange}
-                    onSelectChange={handleSelectChange}
-                    onPhotoChange={handleStudentPhotoChange}
-                    onContinue={handleContinueToGuardian}
-                    onCancel={onClose}
-                    disabled={isSubmitting}
-                    isEditing={!!studentData}
-                    transcriptPreviews={transcriptPreviews} // Add this line
-                    onTranscriptChange={handleTranscriptChange} // Add this line
-                    onRemoveTranscript={removeTranscript} // Add this line
-                  />
-                </div>
-                <div className="w-1/2 flex-shrink-0">
-                  <GuardianForm
-                    formData={formData}
-                    errors={errors}
-                    photoPreview={guardianPhotoPreview}
-                    onInputChange={handleInputChange}
-                    onPhotoChange={handleGuardianPhotoChange}
-                    onSubmit={handleSubmit}
-                    onBack={handleBackToStudent}
-                    isSubmitting={isSubmitting}
-                    disabled={isSubmitting}
-                    isEditing={!!studentData}
-                  />
-                </div>
+  return (
+    <Dialog open={isOpen} onOpenChange={handleCloseRequest}>
+      <DialogContent className="max-w-[95vw] sm:max-w-[80vw] md:max-w-[70vw] lg:max-w-5xl p-0">
+        <div className="custom-scrollbar max-h-[80vh] overflow-y-auto">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle>
+              {studentData ? "Edit " : "Add "}
+              {currentStep === "student" ? "Student Information" : "Parent Information"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="relative overflow-hidden">
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{
+                transform: currentStep === "student" ? "translateX(0%)" : "translateX(-50%)",
+                width: "200%",
+              }}
+            >
+              {/* Student Form */}
+              <div className="w-1/2 flex-shrink-0">
+                <StudentForm
+                  formData={formData}
+                  errors={errors}
+                  photoPreview={studentPhotoPreview}
+                  onInputChange={handleInputChange}
+                  onSelectChange={handleSelectChange}
+                  onPhotoChange={handleStudentPhotoChange}
+                  onContinue={handleContinueToParent}
+                  onCancel={onClose}
+                  disabled={isSubmitting}
+                  isEditing={!!studentData}
+                  transcriptPreviews={transcriptPreviews}
+                  onTranscriptChange={handleTranscriptChange}
+                  onRemoveTranscript={removeTranscript}
+                />
+              </div>
+
+              {/* Parent Step */}
+              <div className="w-1/2 flex-shrink-0">
+                <Card className="mt-8 max-w-xl mx-auto">
+                  <CardHeader>
+                    <CardTitle>
+                      Associate Parent/Guardian
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Parent search or new */}
+                    <div className="mb-4">
+                      <Label htmlFor="parent-search">Search for existing parent (by name or email):</Label>
+                      <Input
+                        id="parent-search"
+                        placeholder="Type to search parents..."
+                        value={parentSearch}
+                        onChange={handleParentSearchChange}
+                        autoComplete="off"
+                        className="mb-2"
+                      />
+                      {parentSearch.length > 1 && parentList.length > 0 && (
+                        <ul className="border rounded bg-white max-h-40 overflow-y-auto">
+                          {parentList.map(parent => (
+                            <li
+                              key={parent._id}
+                              className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedParent && selectedParent._id === parent._id ? "font-bold" : ""}`}
+                              onClick={() => selectExistingParent(parent)}
+                            >
+                              {parent.firstName} {parent.lastName} ({parent.email})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-4 mb-2">
+                      <Button
+                        type="button"
+                        variant={parentIsNew ? "default" : "outline"}
+                        onClick={() => { setParentIsNew(true); setSelectedParent(null) }}
+                      >
+                        Add New Parent
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={!parentIsNew ? "default" : "outline"}
+                        disabled={!selectedParent}
+                        onClick={() => setParentIsNew(false)}
+                      >
+                        Use Selected Parent
+                      </Button>
+                    </div>
+                    {parentIsNew && (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>First Name</Label>
+                            <Input name="firstName" value={parentForm.firstName} onChange={handleParentFormChange} />
+                            {parentFormErrors.firstName && <div className="text-red-500 text-sm">{parentFormErrors.firstName}</div>}
+                          </div>
+                          <div>
+                            <Label>Last Name</Label>
+                            <Input name="lastName" value={parentForm.lastName} onChange={handleParentFormChange} />
+                            {parentFormErrors.lastName && <div className="text-red-500 text-sm">{parentFormErrors.lastName}</div>}
+                          </div>
+                          <div>
+                            <Label>Email</Label>
+                            <Input name="email" value={parentForm.email} onChange={handleParentFormChange} />
+                            {parentFormErrors.email && <div className="text-red-500 text-sm">{parentFormErrors.email}</div>}
+                          </div>
+                          <div>
+                            <Label>Phone</Label>
+                            <Input name="phone" value={parentForm.phone} onChange={handleParentFormChange} />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label>Address</Label>
+                            <Input name="address" value={parentForm.address} onChange={handleParentFormChange} />
+                          </div>
+                          <div className="md:col-span-2">
+                            <Label>Password</Label>
+                            <Input name="password" type="password" value={parentForm.password} onChange={handleParentFormChange} />
+                            {parentFormErrors.password && <div className="text-red-500 text-sm">{parentFormErrors.password}</div>}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {!parentIsNew && selectedParent && (
+                      <div className="my-4 p-4 border rounded">
+                        <div><b>Name:</b> {selectedParent.firstName} {selectedParent.lastName}</div>
+                        <div><b>Email:</b> {selectedParent.email}</div>
+                        <div><b>Phone:</b> {selectedParent.phone}</div>
+                        <div><b>Address:</b> {selectedParent.address}</div>
+                      </div>
+                    )}
+                    <div className="flex justify-between mt-8">
+                      <Button variant="outline" onClick={handleBackToStudent} disabled={isSubmitting}>Back</Button>
+                      <Button className="bg-black text-white" onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? "Saving..." : studentData ? "Update Student" : "Add Student"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
-        </DialogContent>
-        <style jsx>{`
-          .custom-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: #888 #f1f1f1;
-          }
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-          }
-          .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-          }
-          .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #888;
-            border-radius: 6px;
-            border: 3px solid #f1f1f1;
-          }
-        `}</style>
-      </Dialog>
-    </>
+        </div>
+      </DialogContent>
+      <style jsx>{`
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #888 #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #888;
+          border-radius: 6px;
+          border: 3px solid #f1f1f1;
+        }
+      `}</style>
+    </Dialog>
   )
 }
-

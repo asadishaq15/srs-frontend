@@ -23,6 +23,7 @@ interface StudentFormProps {
     dob: string
     email: string
     phone: string
+    password?: string;
     address: string
     enrollDate: string
     expectedGraduation: string
@@ -46,6 +47,7 @@ interface StudentFormProps {
     dob: string
     email: string
     phone: string
+    password?: string;
     address: string
     expectedGraduation: string
     iipFlag: string
@@ -266,19 +268,19 @@ export function StudentForm({
                 />
                 {errors.dob && <p className="text-sm text-red-500 mt-1">{errors.dob}</p>}
               </div>
-              <div className={`space-y-2 ${isEditing === false ? 'hidden' : ""}`}>
-                <Label htmlFor="studentId">Student Id </Label>
-                <Input
-                  id="studentId"
-                  name="studentId"
-                  placeholder="Enter Student ID"
-                  className={`border-gray-200 ${errors.studentId ? "border-red-500" : ""} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
-                  value={formData.studentId}
-                  onChange={onInputChange}
-                  disabled={disabled || isEditing}
-                />
-                {errors.studentId && <p className="text-sm text-red-500 mt-1">{errors.studentId}</p>}
-              </div>
+              <div className="space-y-2">
+  <Label htmlFor="studentId">Student Id </Label>
+  <Input
+    id="studentId"
+    name="studentId"
+    placeholder="Enter Student ID"
+    className={`border-gray-200 ${errors.studentId ? "border-red-500" : ""} ${isEditing ? "bg-gray-100 cursor-not-allowed" : ""}`}
+    value={formData.studentId}
+    onChange={onInputChange}
+    disabled={disabled || isEditing}
+  />
+  {errors.studentId && <p className="text-sm text-red-500 mt-1">{errors.studentId}</p>}
+</div>
               <div className="space-y-2">
                 <Label htmlFor="class">Grade Level </Label>
                 <Input
@@ -427,6 +429,20 @@ export function StudentForm({
                 />
                 {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
               </div>
+              <div className="space-y-2">
+  <Label htmlFor="password">Password</Label>
+  <Input
+    id="password"
+    name="password"
+    type="password"
+    placeholder="Set student password"
+    className={`border-gray-200 ${errors.password ? "border-red-500" : ""}`}
+    value={formData.password || ""}
+    onChange={onInputChange}
+    disabled={disabled}
+  />
+  {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+</div>
             </div>
 
             <div className="space-y-2">

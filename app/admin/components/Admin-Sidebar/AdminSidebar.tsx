@@ -43,6 +43,11 @@ const AdminSidebar = ({isSidebarOpen,setIsSidebarOpen}:{isSidebarOpen:boolean,se
       icon: UserPlus,
     },
     {
+      name: "Manage Parents",
+      href: "/admin/manage-parents",
+      icon: UserPlus,
+    },
+    {
       name: "Manage Teachers",
       href: "/admin/manage-teachers",
       icon: Plus,
@@ -52,6 +57,7 @@ const AdminSidebar = ({isSidebarOpen,setIsSidebarOpen}:{isSidebarOpen:boolean,se
       href: "/admin/generate-report",
       icon: FileText,
     },
+   
     {
       name: "Recent Activity",
       href: "/admin/activities",
