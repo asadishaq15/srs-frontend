@@ -60,8 +60,10 @@ export default function ManageParentsPage() {
                 <td className="border px-3 py-2">{parent.email}</td>
                 <td className="border px-3 py-2">{parent.phone}</td>
                 <td className="border px-3 py-2">
-                  {(parent.children || []).length > 0
-                    ? parent.children.join(", ")
+                {(parent.children || []).length > 0
+                    ? (parent.children.length === 1 
+                        ? '1 child' 
+                        : `${parent.children.length} children`)
                     : "None"}
                 </td>
                 <td className="border px-3 py-2">
